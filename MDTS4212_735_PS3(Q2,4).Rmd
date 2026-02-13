@@ -1,0 +1,199 @@
+---
+title: "predictive_ps3_735"
+author: "Srinjana Sen_735"
+date: "2026-02-12"
+output: word_document
+---
+# PREDICTIVE ANALYTICS
+## Problem Set 3: Multiple Linear Regression
+### Q2. Problem to demonstrate the role of qualitative (nominal) predictors in addition to quantitative predictors in multiple linear regression
+
+Attach “Credits” data from R.\
+```{r}
+library(ISLR)
+library(stargazer)
+
+data("Credit")
+head(Credit)
+```
+Regress “balance” on\
+(a) “gender” only.\
+```{r}
+ma=lm(Balance ~ Gender, data = Credit)
+summary(ma)
+
+```
+
+(b) “gender” and “ethnicity” .\
+```{r}
+mb=lm(Balance ~ Gender + Ethnicity, data = Credit)
+summary(mb)
+
+```
+
+(c) “gender”, “ethnicity”, “income”.\
+```{r}
+mc=lm(Balance ~ Gender + Ethnicity + Income, data = Credit)
+summary(mc)
+```
+
+(d) Output all the regressions in (a)-(c) in a single table using stargazer. Comment on the significant coefficients in each of the models.\
+```{r}
+stargazer(ma, mb, mc,
+          type = "text",
+          title = "Regression Models for Balance",
+          dep.var.labels = "Balance",
+          covariate.labels = c("Male", "Asian", "Caucasian", "Income"))
+```
+Comment on Significant Coefficients:\
+* Gender often becomes insignificant once Income is included.\
+* Income is usually highly significant.\
+* Ethnicity sometimes significant depending on baseline.\
+\
+(e) Explain how gender affects “balance” in each of the models (a)-(c).\
+*Model (a):*\
+Balance difference between Male and Female.\
+*Model (b):*\
+Gender effect adjusted for ethnicity.\
+*Model (c):*\
+Gender effect adjusted for ethnicity + income.\
+Thus, if Gender becomes insignificant thendifference explained through income instead.\
+\
+(f) Compare the average credit card balance of a male African with a male Caucasian on the basis of model (b).\
+In model (b), baseline ethnicity = African American\
+Thus, the difference between Male Caucasian and Male African in model (b) is simply:\
+B3=EthnicityCaucasian coefficient
+```{r}
+coef(mb)["EthnicityCaucasian"]
+```
+\
+(g) Compare the average credit card balance of a male African with a male Caucasian when each earns 100,000 dollars. For comparison, use the model in (c).\
+```{r}
+levels(Credit$Gender)
+levels(Credit$Ethnicity)
+
+new_african=data.frame(
+  Gender = factor("Male", levels = levels(Credit$Gender)),
+  Ethnicity = factor("African American", levels = levels(Credit$Ethnicity)),
+  Income = 100
+)
+
+new_caucasian=data.frame(
+  Gender = factor("Male", levels = levels(Credit$Gender)),
+  Ethnicity = factor("Caucasian", levels = levels(Credit$Ethnicity)),
+  Income = 100
+)
+
+
+predict(mc, new_african)
+predict(mc, new_caucasian)
+
+
+```
+\
+(h) Compare and comment on the answers in (f) and (g)\
+* Model (b) ignores income so ethnicity may look more important.\
+* Model (c) adjusts for income so ethnicity effect may shrink.\
+So income is a confounder.\
+\
+(i) Based on the model in (c), predict the credit card balance of a female Asian whose income is 2000,000 dollars.\
+```{r}
+new_person=data.frame(Gender="Female",
+                         Ethnicity="Asian",
+                         Income=2000)
+
+predict(mc, new_person)
+```
+\
+(j) Check the goodness of fit of the different models in (a) -(c) in terms of AIC, BIC and adjusted R2. Which model would you prefer?\
+```{r}
+AIC(ma, mb, mc)
+BIC(ma, mb, mc)
+
+summary(ma)$adj.r.squared
+summary(mb)$adj.r.squared
+summary(mc)$adj.r.squared
+```
+Preferred modelhas the following characteristics:\
+Lowest AIC/BIC\
+Highest Adjusted R²\
+Thus, model (c) is best.\
+
+### Q4. Problem to demonstrate the impact of ignoring interaction term in multiple linear regression
+
+Consider a simulation setting where the data is generated as follows:\
+**Step 1:** Generate x1i from Normal(0,1) distribution, i = 1, 2, .., n\
+
+**Step 2:** Generate x2i from Bernoulli (0.3) distribution, i = 1, 2, .., n\
+
+**Step 3:** Generate εi from Normal(0,1) and hence generate the response yi = β0 + β1x1i + β2x2i + β3(x1i × x2i) + εi, i = 1, 2, , , n.\
+
+**Step 4:** Run two separate multiple linear regressions (i) using the model in Step 3 and (ii) using the model in Step 3 without the interaction term.\
+Repeat Steps 1-4 , R = 1000 times. At each simulation compute the MSE for the correct model (i.e. model with the interaction term) and the naive model (i.e. the model without the interaction term). Finally find the average MSE’s for each model. From the output, demonstrate the impact of ignoring the interaction term.\
+Carry out the analysis for n = 100 and the following parametric configurations: (β0, β1, β2, β3) = (−2.5, 1.2, 2.3, 0.001) , (-2.5, 1.2. 2.3, 3.1). Set seed as 123.
+
+```{r}
+set.seed(123)
+
+MSE=function(n, b0, b1, b2, b3, R=1000){
+
+  correct_mse=numeric(R)
+  naive_mse=numeric(R)
+
+  for(r in 1:R){
+
+    # Step 1: Generate x1
+    x1=rnorm(n, 0, 1)
+
+    # Step 2: Generate x2
+    x2=rbinom(n, 1, 0.3)
+
+    # Step 3: Generate error and response
+    ei=rnorm(n, 0, 1)
+
+    y=b0 + b1*x1 + b2*x2 + b3*(x1*x2) + ei
+
+    data=data.frame(y, x1, x2)
+
+    # Step 4(i): Correct model with interaction
+    correct_fit=lm(y ~ x1 * x2, data=data)
+
+    # Step 4(ii): Naive model without interaction
+    naive_fit=lm(y ~ x1 + x2, data=data)
+
+    # Predictions
+    correct_pred=predict(correct_fit, data)
+    naive_pred=predict(naive_fit, data)
+
+    # Compute MSE
+    correct_mse[r]=mean((y - correct_pred)^2)
+    naive_mse[r]=mean((y - naive_pred)^2)
+  }
+
+  return(c(mean(correct_mse), mean(naive_mse)))
+}
+```
+
+```{r}
+result1=MSE(n=100,
+                       b0=-2.5,
+                       b1=1.2,
+                       b2=2.3,
+                       b3=0.001)
+
+result1
+```
+Correct Model MSE and Naive Model MSE are approximately equal
+i.e. interaction is negligible
+```{r}
+result2=MSE(n=100,
+                       b0=-2.5,
+                       b1=1.2,
+                       b2=2.3,
+                       b3=3.1)
+
+result2
+```
+Correct Model MSE much smaller than Naive Model MSE
+i.e. if interaction is ignored, it causes major prediction error
+
