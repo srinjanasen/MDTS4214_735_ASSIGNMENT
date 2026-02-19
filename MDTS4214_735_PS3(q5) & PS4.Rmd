@@ -1,0 +1,167 @@
+---
+title: "Predictive_PS3(q5) & PS4_735"
+author: "Srinjana Sen_735"
+date: "2026-02-19"
+output: word_document
+---
+
+# PREDICTIVE ANALYTICS
+## Problem Set 3: Multiple Linear Regression
+### Q5 Problem to demonstrate the utility of non-linear regression over linear regression
+
+Get the fgl data set from “MASS” library.
+```{r}
+library(MASS)
+data("fgl")
+
+veh_data=subset(fgl,type=="Veh")
+```
+
+(a) Considering the refractive index (RI) of “Vehicle Window glass” as the variable of interest and assuming linearity of regression, run multiple linear regression of RI on different metallic oxides. From the p value, report which metallic oxide best explains the refractive index.
+```{r}
+full_model=lm(RI ~ Na + Mg + Al + Si + K + Ca + Ba + Fe, data = veh_data)
+
+summary(full_model)$coefficients
+pval=summary(full_model)$coefficients[-1,4]
+pval
+cat("So the metallic oxide with the strongest relationship with RI is the one with minimum p-value i.e. ",names(which.min(pval)))
+```
+
+(b) Run a simple linear regression of RI on the best predictor chosen in (a).\
+```{r}
+slr_model=lm(RI ~ Fe, data = veh_data)
+summary(slr_model)
+```
+Thus, the fitted model is:\
+RI = -0.5007 + 8.1362 $*$ Fe\
+\
+(c) Can you further improve the regression of the refractive index of “Vehicle Window glass” on the predictor chosen by you in part (a)? Give the new fitted model and compare its performance with the model in (b).
+```{r}
+quad_model = lm(RI ~ Fe + I(Fe^2), data = veh_data)
+summary(quad_model)
+```
+By considering the quadratic term I(Fe^2) in the regression model, we obtain the non-linear relationships between Fe and RI, if any. The quadratic term is significant as the adjusted R-squared increases compared to the linear model, thus providing a better explanation of the relationship between Fe and RI.
+
+
+## Problem Set 4: Some Potential Problems in Multiple Linear Regression
+
+### Q1 Problem to demonstrate multicollinearity
+Consider the Credit data in the ISLR library. Choose Balance as the response and Age, Limit and Rating as the predictors.\
+```{r}
+library(ISLR)
+data(Credit)
+cred_data=(Credit[,c("Balance","Age","Limit","Rating")])
+```
+
+(a) Make a scatter plot of (i) Age versus Limit and (ii) Rating Versus Limit. Comment on the scatter plot.\
+```{r}
+par(mfrow=c(1,2))
+plot(cred_data$Age, cred_data$Limit,
+     xlab = "Age",
+     ylab = "Credit Limit",
+     main = "Age vs Limit")
+plot(cred_data$Rating, cred_data$Limit,
+     xlab = "Rating",
+     ylab = "Credit Limit",
+     main = "Rating vs Limit")
+```
+* Age and Limit exhibit almost no relationship\
+* Rating and Limit on the other hand exhibit very strong positive linear relationship\
+This suggests Limit and Rating are highly correlated, leading to multicollinearity.\
+\
+(b) Run three separate regressions: (i) Balance on Age and Limit (ii) Balance on Age, Rating and Limit (iii) Balance on Rating and Limit. Present all the regression output in a single table using stargazer. What is the marked difference that you can observe from the output?\
+```{r}
+m1=lm(Balance ~ Age + Limit, data = Credit)
+m2=lm(Balance ~ Age + Rating + Limit, data = Credit)
+m3=lm(Balance ~ Rating + Limit, data = Credit)
+library(stargazer)
+stargazer(m1, m2, m3,
+          type = "text",
+          title = "Regression Models for Balance",
+          column.labels = c("Age+Limit", "Age+Rating+Limit", "Rating+Limit"),
+          dep.var.labels = "Balance")
+
+```
+Limit doesn't have significant effect on models 2 and 3.\
+\
+(c) Calculate the variance inflation factor (VIF) and comment on multicollinearity.\
+```{r}
+library(car)
+vif(m2)
+vif(m1)
+```
+Clearly, the high VIF-s of Rating and Limit in imply multicollinearity. Thus we check the VIF of model 1 where Rating is dropped. The VIF-s signify lack of multicollinearity.\
+
+### Q2 Problem to demonstrate the detection of outlier, leverage and influential points
+
+Attach “Boston” data from MASS library in R. Select median value of owner-occupied homes, as the response and per capita crime rate, nitrogen oxides concentration, proportion of blacks and percentage of lower status of the population as predictors. The objective is to fit a multiple linear regression model of the response on the predictors. With reference to this problem, detect outliers, leverage points and influential points if any.\
+```{r}
+library(MASS)
+data(Boston)
+bos_data=(Boston[,c("medv","crim","nox","black","lstat")])
+model=lm(medv ~ crim + nox + black + lstat, data = bos_data)
+summary(model)
+```
+
+```{r outliers}
+
+std_res = rstandard(model) 
+fit_val = fitted(model)
+
+
+plot(fit_val, std_res,
+     xlab = "Fitted Values",
+     ylab = "Standardized Residuals",
+     main = "Residual Plot for Outlier Detection",
+     pch = 18, col = rgb(0.2, 0.4, 0.6, 0.6))
+
+abline(h = c(-3, 3), col = "black", lty = 2, lwd = 2)
+
+ 
+outliers=which(abs(std_res) > 3)
+cat("Observations identified as outliers:\n")
+print(outliers)
+
+```
+
+By looking at the graph, any points falling above the dashed line correspond exactly to the indices and are identified as outliers. 
+
+```{r leverage}
+p = 4  
+n = nrow(Boston)
+leverage_cutoff = 2 * (p + 1) / n
+
+
+lev = hatvalues(model)
+
+
+plot(lev, type = "h", 
+     main = "Leverage Values by Observation", 
+     ylab = "Leverage", xlab = "Index")
+abline(h = leverage_cutoff, col = "blue", lty = 2, lwd = 2)
+
+
+high_lev = which(lev > leverage_cutoff)
+cat("Number of high leverage points detected:", length(high_lev), "\n")
+
+```
+By looking at the graph, any observation falling above the dashed line correspond exactly to the indices and are identified as leverage points. 
+
+```{r cooks}
+
+cooks_d = cooks.distance(model)
+cooks_cutoff = 4 / n
+
+
+plot(cooks_d, type = "h", 
+     main = "Cook's Distance by Observation", 
+     ylab = "Cook's Distance", xlab = "Index")
+abline(h = cooks_cutoff, col = "darkgreen", lty = 2, lwd = 2)
+
+
+influential_points=which(cooks_d > cooks_cutoff)
+cat("Number of influential points detected:", length(influential_points), "\n")
+
+```
+By looking at the graph, any points falling above the dashed line correspond exactly to the indices and are identified as influential points. 
+
