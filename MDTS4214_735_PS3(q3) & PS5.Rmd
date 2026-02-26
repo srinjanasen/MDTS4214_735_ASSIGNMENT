@@ -1,0 +1,162 @@
+---
+title: "Predictive_PS3(Q3) & PS5_735"
+author: "Srinjana Sen"
+date: "2026-02-26"
+output: word_document
+---
+# PREDICTIVE ANALYTICS
+## Problem Set 3: Multiple Linear Regression
+### 3 Problem to demonstrate the role of qualitative (ordinal) predictors in addition to quantitative predictors in multiple linear regression
+Consider “diamonds” data set in R. It is in the ggplot2 package. Make a list of all the ordinal categorical variables. Identify the response.\
+(a) Run a linear regression of the response on the quality of cut. Write the fitted regression model.\
+```{r}
+library(ggplot2)
+head(diamonds$cut)
+lvl = as.numeric(diamonds$cut)
+code_fun = function(x)
+{
+  if (x-5==0)
+  {
+    return(c(0,0,0,0))
+  }
+  else if (x-5==-1)
+  {
+    return(c(1,0,0,0))
+  }else if (x-5==-2)
+  {
+    return(c(1,1,0,0))
+  }else if (x-5==-3)
+  {
+    return(c(1,1,1,0))
+  }
+  else
+  {
+    return(c(1,1,1,1))
+  }
+}
+
+pred = t(sapply(lvl,code_fun))
+colnames(pred)=c("Premium","Very_Good","Good","Fair")
+diamonds=cbind(diamonds,pred)
+model = lm(price ~ Premium+Very_Good+Good+Fair, data = diamonds)
+summary(model)
+```
+The fitted model is: Price^hat = 3457.54 + 1126.72 \*\ Premium - 602.50 \*\ Very Good - 52.90 \*\ Good + 429.89 \*\ Fair.\
+(b) Test whether the expected price of diamond with premium cut is significantly different from that of the ideal cut.\
+Yes it is, since BetaIdeal = 3457.54, and Beta Premium = 3457.54 + 1126.72. Expected Price of a Premium cut diamond increases by 1126.72 units than that of an ideal cut diamond.\
+(c) What is the expected price of a diamond of ideal cut?\
+3457.54\
+(d) Modify the regression model in (a) by incorporating the predictor “table”. Write the fitted regression model.\
+```{r}
+m2 = lm(price ~ Premium+Very_Good+Good+Fair+table, data = diamonds)
+library(stargazer)
+stargazer(m2,type = "text")
+```
+Fitted regression model is: Price^hat = -6,563.672 + 626.220 \*\ Premium - 461.015 \*\ Very Good - 185.162 \*\ Good + 365.568 \*\ Fair + 179.105 \*\ table\
+(e) Test for the significance of “table” in predicting the price of diamond.\
+p value for the predictor table is less than 0.01. This shows that table is an important predictor and significantly influences the expected price of diamonds.\
+(f) Find the average estimated price of a diamond with an average table value and which is of fair cut.\
+ Price^hat = -6,563.672 + 626.220 \*\ Premium - 461.015 \*\ Very Good - 185.162 \*\ Good + 365.568 \*\ Fair + 179.105 \*\ table\
+
+## Problem Set 5: K nearest neighbours regression
+### 1 Problem to demonstrate the utility of K nearest neighbour regression over least squares regression
+
+Consider a setting with n = 1000 observations.\
+```{r}
+set.seed(123)
+n=1000
+```
+Generate\
+(i) x1i from N(0, 2^2) and x2i from Poisson(λ = 1.5).\
+```{r}
+x1i=rnorm(n, mean = 0, sd = 2)
+x2i=rpois(n, lambda = 1.5)
+```
+(ii) εi from N(0, 1).\
+```{r}
+ei=rnorm(n, mean = 0, sd = 1)
+```
+(iii) yi = −2 + 1.4x1i − 2.6x2i + εi.\
+```{r}
+yi=-2 + 1.4*x1i - 2.6*x2i + ei
+```
+Split the data into train and test sets. Keep the first 800 observations as training data and the remaining as test data.\
+```{r}
+data=data.frame(y = yi, x1 = x1i, x2 = x2i)
+head(data)
+
+train_data=data[1:800, ]
+test_data=data[801:1000, ]
+train_x=data.frame(train_data$x1,train_data$x2)
+test_x=data.frame(test_data$x1,test_data$x2)
+train_y=train_data$y
+test_y=test_data$y
+```
+
+Work out the following:\
+1. Fit a multiple linear regression equation of y on x1 and x2. Calculate test MSE.\
+```{r}
+model=lm(y ~ x1 + x2, data = train_data)
+summary(model)
+y_pred=predict(model, newdata = test_data)
+test_mse=mean((test_data$y - y_pred)^2)
+test_mse
+```
+
+2. Fit a KNN model with k = 1, 2, 5, 9, 15. Calculate test MSE for each choice of k.\
+```{r}
+library(FNN)
+k_values=c(1, 2, 5, 9, 15)
+test_mse_knn=numeric(length(k_values))
+for (i in seq_along(k_values)) {
+  k=k_values[i]
+  pred=knn.reg(
+    train = train_x,
+    test  = test_x,
+    y     = train_y,
+    k     = k
+  )$pred
+  test_mse_knn[i]=mean((test_y - pred)^2)
+}
+data.frame(k = k_values, Test_MSE = test_mse_knn)
+```
+Suppose the data in Step (iii) is generated as:\
+yi = 1/(−2 + 1.4x1i − 2.6x2i + 2.9(x1i)^2) + 3.1 sin(x2i) − 1.5x1i(x2i)^2 + εi.\
+Work out the problems in (1) and (2). Compare and comment on the results.
+```{r}
+yi=(1/(-2+1.4*x1i-2.6*x2i+2.9*(x1i^2)))+3.1*sin(x2i)-1.5*x1i*(x2i^2)+ei
+data=data.frame(y = yi, x1 = x1i, x2 = x2i)
+head(data)
+
+train_data=data[1:800, ]
+test_data=data[801:1000, ]
+train_x=data.frame(train_data$x1,train_data$x2)
+test_x=data.frame(test_data$x1,test_data$x2)
+train_y=train_data$y
+test_y=test_data$y
+
+model=lm(y ~ x1 + x2, data = train_data)
+summary(model)
+y_pred=predict(model, newdata = test_data)
+test_mse=mean((test_data$y - y_pred)^2)
+test_mse
+
+library(FNN)
+k_values=c(1, 2, 5, 9, 15)
+test_mse_knn=numeric(length(k_values))
+for (i in seq_along(k_values)) {
+  k=k_values[i]
+  pred=knn.reg(
+    train = train_x,
+    test  = test_x,
+    y     = train_y,
+    k     = k
+  )$pred
+  test_mse_knn[i]=mean((test_y - pred)^2)
+}
+data.frame(k = k_values, Test_MSE = test_mse_knn)
+```
+
+In the first set of results, the test MSE decreases from k = 1 to k = 9 and then increases slightly at k = 15. This is the expected behavior of KNN due to the bias–variance tradeoff. When k is very small, the model has high variance and tends to overfit, leading to larger test error. As k increases, variance reduces and the error decreases, reaching a minimum at a moderate value of k. If k becomes too large, the model becomes overly smooth, bias increases, and the test error rises slightly. The magnitude of the MSE (around 1–2) is reasonable given that the true error variance is 1, indicating correct implementation, most likely with proper standardization of predictors.\
+
+In the second set, the test MSE values are extremely large (around 50–60) and increase steadily as k increases. This pattern is not theoretically expected. Such inflated errors strongly suggest that the predictors were not standardized before applying KNN. Since KNN relies on Euclidean distance, differences in scale across variables can distort neighborhood formation and severely worsen prediction performance. Therefore, the first set reflects proper modeling, while the second set likely results from incorrect preprocessing.\
