@@ -1,0 +1,328 @@
+---
+title: "Predictive_PS6 & PS7_735"
+author: "srinjana sen"
+date: "2026-03-13"
+output: word_document
+---
+# PREDICTIVE ANALYTICS
+## PROBLEM SHEET 6: Model Selection
+### To demonstrate the application of subset selection methods
+
+**Consider the “Hitters” data. For loading the data you need to install ISLR library. We wish to predict a baseball player’s salary on the basis of various predictors. So first we need to choose an optimal model.**
+
+```{r}
+library(ISLR)
+hit = Hitters
+head(hit)
+```
+
+**1. Clean the data by removing all rows that have missing value in any variable. You will be working with this clean data.**
+
+```{r}
+hc = na.omit(hit)
+```
+
+**2. Split the data randomly into train-test keeping 80% as training sample and remaining as test sample.**
+
+```{r}
+nrow(hc)
+set.seed(123)
+trsample=sample(1:263,210)
+train = hc[trsample,]
+test = hc[-trsample,]
+```
+
+**3. Perform the best subset selection on the training sample. While choosing the best model fit up to a 19 variable model. Choose the best model according to adjusted R squared, BIC , AIC and Cp values.**
+
+```{r}
+library(leaps)
+library(stargazer)
+m1=regsubsets(Salary~.,data=train,nvmax = 19)
+s1 = summary(m1)
+
+r2 = s1$adjr2
+b = s1$bic
+cp = s1$cp
+
+coef(m1,which.min(b))
+
+coef(m1,which.max(r2))
+
+coef(m1,which.max(cp))
+```
+
+The best model under Best Subset Selection method with BIC as the criterion is :
+
+Salary = 149.5853608 + 5.9582020 Walks - 0.5241611 CAtBat + 2.0687418 CHits + 1.7652811 CHmRun - 129.0165012 Division(West)
+
+The best model under Best Subset Selection method with Adjusted R^2 as the criterion is :
+
+Salary = 154.1594365 - 1.8722264 AtBat + 5.7547106 Hits + 6.3852096 Walks - 0.2092154 CAtBat + 1.7712871 CRuns + 1.1419024 CRBI - 0.8989348 CWalks - 121.8633686 Division(West) + 0.2013298 PutOuts + 0.5363804 Assists - 6.4726568 Errors + 75.8378982 NewLeague(North)
+
+The best model under Best Subset Selection method with Cp as the criterion is :
+
+Salary = 198.4540472 + 0.9668301 CRuns
+
+**4. Find the training MSE and test MSE for each of the best models selected according to different criterion as mentioned in 3 and compare their values.** 
+
+```{r}
+
+# FOR BIC
+
+mlb = lm (Salary ~ Walks + CAtBat + CHits + CHmRun + Division, data = hc)
+tprb = predict(mlb, newdata = train)
+tmseb = mean((train$Salary-tprb)^2,na.rm = TRUE)
+tmseb
+
+tepb = predict(mlb, newdata = test)
+temseb = mean((test$Salary-tepb)^2,na.rm = TRUE)
+temseb
+
+# FOR R^2
+
+mlr = lm (Salary ~ AtBat + Hits + Walks + CAtBat + CRuns + CRBI + CWalks + Division + PutOuts + Assists + Errors + NewLeague, data = hc)
+tprr = predict(mlr, newdata = train)
+tmse1r = mean((train$Salary-tprr)^2,na.rm = TRUE)
+tmse1r
+
+teprr = predict(mlr, newdata = test)
+temser = mean((test$Salary-teprr)^2,na.rm = TRUE)
+temser
+
+#FOR CP MEASURES
+
+mlc = lm (Salary ~ CRuns, data = hc)
+tprc = predict(mlc, newdata = train)
+tmse1c = mean((train$Salary-tprc)^2,na.rm = TRUE)
+tmse1c
+
+tepc = predict(mlc, newdata = test)
+temsec = mean((test$Salary-tepc)^2,na.rm = TRUE)
+temsec
+
+```
+
+For BIC model, 
+Training MSE is 99834.7
+Test MSE is 125936.5
+
+For Adjusted R^2 model, 
+Training MSE is 92725.29
+Test MSE is 92883.5
+
+For Cp model, 
+Training MSE is 137357.4
+Test MSE is 143262.4
+
+**5. Repeat 3-4 using forward stepwise selection method.**
+
+```{r}
+m2=regsubsets(Salary~.,data=train,nvmax = 19,method = "forward")
+s2 = summary(m2)
+s2
+r22 = s1$adjr2
+b2 = s1$bic
+cp2 = s1$cp
+
+coef(m2,which.min(b2))
+
+coef(m2,which.max(r22))
+
+coef(m2,which.max(cp2))
+```
+
+The best model under Forward Selection method with BIC as the criterion is :
+
+Salary = 36.5684319 + 8.0759181 Walks + 0.6573918 CRuns + 0.7699755 CRBI - 0.9132118 CWalks - 150.6361441 Division(West)
+
+The best model under Forward Selection method with Adjusted R^2 as the criterion is :
+
+Salary = 142.2438912 + 5.0866871 Walks - 9.3715553 Years - 0.4123632 CAtBat + 1.0375990 CHits  + 1.2264552 CRuns + 0.9166203 CRBI - 0.4982937 CWalks - 126.5815395 Division(West) + 0.1573527 PutOuts + 0.4433298 Assists - 7.9631878 Errors + 73.6856084 NewLeague(North)
+
+The best model under Forward Selection method with Cp as the criterion is :
+
+Salary = 198.4540472 + 0.9668301 CRuns
+
+```{r}
+# FOR BIC
+
+mlb2 = lm (Salary ~ Walks + CRuns + CRBI + CWalks + Division, data = hc)
+tprb2 = predict(mlb2, newdata = train)
+tmseb2 = mean((train$Salary-tprb2)^2,na.rm = TRUE)
+tmseb2
+
+tepb2 = predict(mlb2, newdata = test)
+temseb2 = mean((test$Salary-tepb2)^2,na.rm = TRUE)
+temseb2
+
+# FOR R^2
+
+mlr2 = lm (Salary ~ Years + CHits + Walks + CAtBat + CRuns + CRBI + CWalks + Division + PutOuts + Assists + Errors + NewLeague, data = hc)
+tprr2 = predict(mlr2, newdata = train)
+tmse1r2 = mean((train$Salary-tprr2)^2,na.rm = TRUE)
+tmse1r2
+
+teprr2 = predict(mlr2, newdata = test)
+temser2 = mean((test$Salary-teprr2)^2,na.rm = TRUE)
+temser2
+
+#FOR CP MEASURES
+
+mlc2 = lm (Salary ~ CRuns, data = hc)
+tprc2 = predict(mlc2, newdata = train)
+tmse1c2 = mean((train$Salary-tprc2)^2,na.rm = TRUE)
+tmse1c2
+
+tepc2 = predict(mlc2, newdata = test)
+temsec2 = mean((test$Salary-tepc2)^2,na.rm = TRUE)
+temsec2
+
+```
+
+For BIC model, 
+Training MSE is 103972.3
+Test MSE is 121965.5
+
+For Adjusted R^2 model, 
+Training MSE is 95071.25
+Test MSE is 104803.7
+
+For Cp model, 
+Training MSE is 137357.4
+Test MSE is 143262.4
+
+**6. Repeat 3-4 using backward stepwise selection method.**
+
+```{r}
+m3=regsubsets(Salary~.,data=train,nvmax = 19,method = "backward")
+s3 = summary(m3)
+s3
+r23 = s1$adjr2
+b3 = s1$bic
+cp3 = s1$cp
+
+coef(m3,which.min(b3))
+
+coef(m3,which.max(r23))
+
+coef(m3,which.max(cp3))
+```
+
+The best model under Backward Selection method with BIC as the criterion is :
+
+Salary = 149.5853608 + 5.9582020 Walks - 0.5241611 CAtBat + 2.0687418 CHits + 1.7652811 CHmRun - 129.0165012 Division(West)
+
+The best model under Backward Selection method with Adjusted R^2 as the criterion is :
+
+Salary = 128.4775362 - 1.6435471 AtBat + 4.8956735 Hits + 6.2891408 Walks - 0.3333956 CAtBat + 1.0605358 CHits + 2.2338055 CHmRun + 0.9923502 CRuns - 0.6084893 CWalks - 119.7833172 Division(West) + 0.1891262 PutOuts + 0.3331968 Assists + 67.0051884 NewLeague(North)
+
+The best model under Backward Selection method with Cp as the criterion is :
+
+Salary = 206.1775662 + 0.4746584 CHits
+
+
+```{r}
+# FOR BIC
+
+mlb3 = lm (Salary ~ Walks + CAtBat + CHits + CHmRun + Division, data = hc)
+tprb3 = predict(mlb3, newdata = train)
+tmseb3 = mean((train$Salary-tprb3)^2,na.rm = TRUE)
+tmseb3
+
+tepb3 = predict(mlb3, newdata = test)
+temseb3 = mean((test$Salary-tepb3)^2,na.rm = TRUE)
+temseb3
+
+# FOR R^2
+
+mlr3 = lm (Salary ~ CHits + Walks + CAtBat + CRuns + AtBat + CWalks + Division + PutOuts + Assists + NewLeague + Hits + CHmRun, data = hc)
+tprr3 = predict(mlr3, newdata = train)
+tmse1r3 = mean((train$Salary-tprr3)^2,na.rm = TRUE)
+tmse1r3
+
+teprr3 = predict(mlr3, newdata = test)
+temser3 = mean((test$Salary-teprr3)^2,na.rm = TRUE)
+temser3
+
+#FOR CP MEASURES
+
+mlc3 = lm (Salary ~ CHits, data = hc)
+tprc3 = predict(mlc3, newdata = train)
+tmse1c3 = mean((train$Salary-tprc3)^2,na.rm = TRUE)
+tmse1c3
+
+tepc3 = predict(mlc3, newdata = test)
+temsec3 = mean((test$Salary-tepc3)^2,na.rm = TRUE)
+temsec3
+```
+
+For BIC model, 
+Training MSE is 99834.7
+Test MSE is 125936.5
+
+For Adjusted R^2 model, 
+Training MSE is 93695.94
+Test MSE is 91170.24
+
+For Cp model, 
+Training MSE is 143058.5
+Test MSE is 136069.5
+
+**7. Compare the results of the three methods in terms of choice of best model, train MSE and test MSE.**
+
+The Cp criterion produced very simple models with only one predictor in most cases. These models had the highest training and test MSE values, indicating underfitting.
+
+The Models selected using Adjusted R squared included much more predictors and showed better predictive performance.
+
+Among all models, the Best Subset Selection model chosen using Adjusted R squared had the lowest training MSE.
+The Backward Selection model chosen using Adjusted R squared had the lowest test MSE of 91170.24.
+The BIC models were more than the Adjusted R squared models but had slightly higher test error.
+
+So, in Conclusion,
+
+Best Subset Selection examines all possible combinations of predictors and chooses the optimal model, but it is computationally expensive. Forward Selection builds the model by adding predictors one at a time, while Backward Selection begins with the full model and removes predictors step by step.
+
+Based on the test MSE values, the Backward Selection model selected using Adjusted R squared performs the best for predicting baseball players' salaries.
+
+## PROBLEM SHEET 7: Shrinkage Methods
+
+### Comparison of least squares, ridge regression, LASSO and Elastic Net
+
+**You would be working with Hitters data set available in the ISLR library. You have to predict the Salary based on all available variables. First make sure that you have deleted all rows with one or more missing values.**
+
+```{r}
+hclean = na.omit(Hitters)
+```
+
+**1. Split the data set into a training set and a test set randomly keeping 100 observations in test set and remaining in the training set.**
+
+```{r}
+set.seed(123)
+nrow(hclean)
+trsamp=sample(1:263,100)
+traind = hclean[-trsamp,]
+testd = hclean[trsample,]
+```
+
+**2. Train the model using least squares and report the train MSE and test MSE.**
+
+```{r}
+fit = lm(Salary ~. , data = traind)
+fit2 = lm(Salary ~., data = testd)
+trainmse = mean (resid(fit)^2)
+trainmse
+testmse = mean (resid(fit2)^2)
+testmse
+```
+
+Training MSE is 105334.2
+Test MSE is 87901.66
+
+**3. Fit ridge regression models on the training set, with grid values of λ.** 
+
+```{r}
+library(glmnet)
+glmnet(traind,traind$Salary,alpha = 0)
+
+```
+
