@@ -1,0 +1,104 @@
+---
+title: "Predictive_PS4(Q1 except d)_735"
+author: "Srinjana Sen"
+date: "2026-03-29"
+output: word_document
+---
+
+# PREDICTIVE ANALYTICS
+## Problem Set 4
+### 1. Problem to demonstrate the fitting of a binary response variable using logistic regression
+a. Consider the Weekly data available in the ISLR package of R. Use the data from 1990 to 2008 as train data and the data on 2009-2010 as test data.\ 
+```{r}
+library(ISLR)
+data(Weekly)
+str(Weekly)
+
+train=Weekly[Weekly$Year<=2008,]
+test =Weekly[Weekly$Year>2008,]
+
+nrow(train)
+nrow(test)
+```
+
+b. Using the training data,fit a logistic regression with Direction as the response and the five lag variables plus Volume as predictors. Are there any significant predictors? If not,which of the tests is reporting the least p value. Interpret the coefficient corresponding to that test.\ 
+```{r}
+log_reg=glm(Direction ~ Lag1+Lag2+Lag3+Lag4+Lag5+Volume,
+            data=train,
+            family=binomial)
+
+summary(log_reg)
+```
+
+```{r}
+coef(log_reg)["Lag2"]
+```
+
+
+c. Estimate the odds of market going “up” at median values of the predictors.\ 
+```{r}
+median=apply(train[,c("Lag1","Lag2","Lag3","Lag4","Lag5","Volume")],
+                 2,median)
+
+median_df=as.data.frame(t(median))
+
+prob=predict(log_reg,newdata=median_df,type="response")
+
+odds=prob/(1-prob)
+
+prob
+odds
+```
+
+e. Using the fitted model and the predictor values from the test data,find an optimal cut point that minimizes TPR(1−FPR). Report the confusion matrix corresponding to the optimal cut-point value. From the confusion matrix compute the test error rate.\
+```{r}
+test_prob=predict(log_reg,newdata=test,type="response")
+
+library(pROC)
+
+roc_obj=roc(test$Direction,test_prob)
+
+tpr=roc_obj$sensitivities
+fpr=1-roc_obj$specificities
+threshold=roc_obj$threshold
+
+metric=tpr*(1-fpr)
+
+opt_index=which.max(metric)
+opt_cutoff=threshold[opt_index]
+
+opt_cutoff
+
+test_pred=ifelse(test_prob>opt_cutoff,"Up","Down")
+
+table(Predicted=test_pred,Actual=test$Direction)
+
+mean(test_pred!=test$Direction)
+```
+
+f. Is there any change in the test error rate if we have worked with only the two predictors lag 1 and lag 2?\ 
+```{r}
+red_fit=glm(Direction ~ Lag1+Lag2,
+                data=train,
+                family=binomial)
+
+summary(red_fit)
+
+red_test_prob=predict(red_fit,newdata=test,type="response")
+
+red_roc_obj=roc(test$Direction,red_test_prob)
+
+red_tpr=red_roc_obj$sensitivities
+red_fpr=1-red_roc_obj$specificities
+red_threshold=red_roc_obj$threshold
+
+red_metric=red_tpr*(1-red_fpr)
+red_opt_cutoff=red_threshold[which.max(red_metric)]
+
+red_test_pred=ifelse(red_test_prob>red_opt_cutoff,"Up","Down")
+
+table(Predicted=red_test_pred,Actual=test$Direction)
+
+mean(red_test_pred != test$Direction)
+```
+
