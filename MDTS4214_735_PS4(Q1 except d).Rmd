@@ -50,7 +50,7 @@ prob
 odds
 ```
 
-e. Using the fitted model and the predictor values from the test data,find an optimal cut point that minimizes TPR(1−FPR). Report the confusion matrix corresponding to the optimal cut-point value. From the confusion matrix compute the test error rate.\
+e. Using the fitted model and the predictor values from the test data,find an optimal cut point that maximizes TPR(1−FPR). Report the confusion matrix corresponding to the optimal cut-point value. From the confusion matrix compute the test error rate.\
 ```{r}
 test_prob=predict(log_reg,newdata=test,type="response")
 
